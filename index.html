@@ -1,702 +1,721 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스마트 재고 관리 대시보드</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS (xlsx) CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-    </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex antialiased">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>재고 현황 대시보드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 레이아웃: 좌측 고정 메뉴 + 우측 작업 영역(대시보드 / 상세보기 / 업로드 전환). 밝은 단일 테마. 모바일에서는 메뉴가 상단 띠로 바뀐다. */
+:root{
+  --bg:#F3F7F6;
+  --surface:#FFFFFF;
+  --ink:#16262B;
+  --muted:#5B6F76;
+  --line:#DAE4E3;
+  --line-soft:#EAF0EF;
+  --head:#F6F9F8;
+  --hover:#F7FBFA;
+  --nil:#A3B1B5;
+  --dash:#B7C9C8;
+  --accent:#0E7C86;
+  --accent-ink:#0A5F67;
+  --accent-soft:#E0F1F2;
+  --on-accent:#FFFFFF;
+  --good:#2F8A58;
+  --warn:#B9780A;
+  --crit:#C23B2A;
+  --crit-soft:#FBE9E6;
+  --c1:#0E7C86;
+  --c2:#3D6FD1;
+  --c3:#D9962B;
+  --c4:#D4604A;
+  --c5:#58A06B;
+  --c6:#7B8794;
+  --other:#B9C6C7;
+  --bar-neutral:#C7D2D4;
+  --font-body:"IBM Plex Sans KR","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-    <!-- Left Sidebar Navigation -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed inset-y-0 z-30 shadow-sm">
-        <!-- Brand Header -->
-        <div class="h-16 border-b border-slate-100 px-6 flex items-center space-x-3">
-            <div class="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-600/20 flex items-center justify-center">
-                <i data-lucide="boxes" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-slate-900 text-base tracking-tight flex items-center gap-1.5">
-                    StockPulse <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-semibold border border-indigo-100">PRO</span>
-                </h1>
-                <p class="text-[11px] text-slate-400 font-medium">재고 관리 시스템</p>
-            </div>
-        </div>
+.app{display:flex;height:100%;min-height:0}
 
-        <!-- Navigation Menu -->
-        <div class="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-            <div class="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Main Menu</div>
-            <a href="#kpiSection" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition group">
-                <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition"></i>
-                <span>대시보드 개요</span>
-            </a>
-            <a href="#chartSection" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition group">
-                <i data-lucide="pie-chart" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition"></i>
-                <span>재고 시각화 분석</span>
-            </a>
-            <a href="#tableSection" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition group">
-                <i data-lucide="table" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition"></i>
-                <span>상세 재고 테이블</span>
-            </a>
+/* 좌측 메뉴 */
+.side{width:236px;flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px;padding:20px 14px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px;flex:none}
+.brand-mark{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none}
+.brand-name{font-weight:700;font-size:15px;line-height:1.2;white-space:nowrap}
+.brand-sub{font-size:12px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-weight:500;text-align:left;cursor:pointer}
+.nav-item svg{flex:none}
+.nav-item:hover{background:var(--line-soft);color:var(--ink)}
+.nav-item[aria-current="page"]{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.datacard{margin-top:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--bg);min-width:0}
+.dc-label{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.dc-name{font-weight:600;margin-top:2px;overflow-wrap:anywhere}
+.dc-meta{font-size:12px;color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums}
 
-            <div class="pt-6 px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Data Management</div>
-            <button id="sampleBtn" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition group text-left">
-                <i data-lucide="database" class="w-4 h-4 text-indigo-500"></i>
-                <span>샘플 데이터 로드</span>
-            </button>
-            <label class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-600"></i>
-                <span>엑셀 파일 업로드</span>
-                <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" class="hidden">
-            </label>
-        </div>
+/* 우측 작업 영역 */
+.main{flex:1;min-width:0;overflow-y:auto;padding:24px 28px 48px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px 16px;margin-bottom:18px}
+.top h1{margin:0;font-size:20px;line-height:1.3;font-weight:700;text-wrap:balance}
+.top p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:60ch}
+.top-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.chip{display:inline-flex;align-items:center;max-width:240px;height:28px;padding:0 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.sample{background:var(--accent-soft);border-color:transparent;color:var(--accent-ink);font-weight:500}
 
-        <!-- Sidebar Footer Info -->
-        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-xs">
-                    AD
-                </div>
-                <div class="overflow-hidden">
-                    <p class="text-xs font-semibold text-slate-800 truncate">관리자 계정</p>
-                    <p class="text-[10px] text-slate-400 truncate">admin@stockpulse.io</p>
-                </div>
-            </div>
-        </div>
-    </aside>
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.fld.inl{flex-direction:row;align-items:center;gap:6px}
+.sel{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);max-width:100%}
+.ctrls{display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:14px}
 
-    <!-- Main Wrapper (Offset for Left Sidebar) -->
-    <div class="flex-1 ml-64 flex flex-col min-h-screen">
+.note{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent-ink);font-size:13px;margin-bottom:14px}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent-ink);text-decoration:underline;cursor:pointer;font-weight:600}
 
-        <!-- Top Navigation Header -->
-        <header class="h-16 bg-white border-b border-slate-200 sticky top-0 z-20 px-8 flex items-center justify-between shadow-xs">
-            <div class="flex items-center space-x-3">
-                <h2 class="text-lg font-bold text-slate-900">종합 재고 관리 및 분석 대시보드</h2>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button id="exportBtn" class="flex items-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-xl transition border border-slate-200 shadow-2xs">
-                    <i data-lucide="download" class="w-4 h-4 text-emerald-600"></i>
-                    <span>CSV 내보내기</span>
-                </button>
-            </div>
-        </header>
+/* 요약 수치 */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.kpi-l{font-size:12px;color:var(--muted)}
+.kpi-v{font-family:var(--font-num);font-size:24px;font-weight:500;line-height:1.3;margin-top:4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi-v small{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-left:4px}
+.kpi-s{font-size:12px;color:var(--muted);min-height:18px}
+.kpi.alert .kpi-v{color:var(--crit)}
 
-        <!-- Content Area -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-8 space-y-8">
+/* 차트 */
+.cgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+.s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}.s12{grid-column:span 12}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0}
+.card h2{margin:0;font-size:14px;font-weight:600}
+.card .sub{font-size:12px;color:var(--muted);margin:2px 0 12px}
+.cbox{position:relative;height:270px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:-4px 0 8px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.lg .a i{background:var(--c1)}.lg .b i{background:var(--crit)}.lg .c i{background:var(--bar-neutral)}
 
-            <!-- Toast Notification Banner -->
-            <div id="toastMessage" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center justify-between text-sm shadow-sm transition-all duration-300">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>
-                    <span id="toastText">데이터가 성공적으로 로드되었습니다.</span>
-                </div>
-                <button onclick="hideToast()" class="text-emerald-700 hover:text-emerald-900 font-bold">&times;</button>
-            </div>
+/* 상세 표 */
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:12px}
+.search{flex:1 1 220px;max-width:340px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px}
+.count{margin-left:auto;font-size:12px;color:var(--muted)}
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:calc(100vh - 270px);min-height:200px}
+.t{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+.t th{position:sticky;top:0;z-index:1;background:var(--head);border-bottom:1px solid var(--line);padding:0;text-align:left;white-space:nowrap}
+.t th.idx{padding:9px 14px;color:var(--muted);font-weight:500;text-align:right}
+.th{display:flex;align-items:center;gap:6px;width:100%;padding:9px 14px;border:0;background:none;font-weight:600;cursor:pointer;color:var(--ink);justify-content:flex-start}
+.t th.num .th{justify-content:flex-end}
+.th:hover{color:var(--accent-ink)}
+.ty{font-size:11px;font-weight:500;color:var(--muted);background:var(--line-soft);padding:0 6px;border-radius:999px}
+.arr{font-size:9px;color:var(--accent);min-width:9px}
+.t td{padding:8px 14px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.t td.idx{text-align:right;color:var(--muted);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.t td.num{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.t td.dt{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.t td.txt{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.t td.short{color:var(--crit);font-weight:500}
+.t tbody tr:hover td{background:var(--hover)}
+.t td.empty{text-align:center;color:var(--muted);padding:32px 14px}
+.nil{color:var(--nil)}
+.pill{display:inline-block;margin-right:8px;padding:0 7px;border-radius:999px;font-size:11px;font-weight:600;background:var(--crit-soft);color:var(--crit);font-family:var(--font-body)}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;font-size:13px;color:var(--muted)}
+.btn{height:32px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:500}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover:not(:disabled){background:var(--accent-ink);border-color:var(--accent-ink);color:var(--on-accent)}
 
-            <!-- KPI Summary Cards Section -->
-            <section id="kpiSection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <!-- Card 1 -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">총 품목 수</p>
-                            <h3 id="kpiTotalItems" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
-                        </div>
-                        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-indigo-600">
-                            <i data-lucide="package" class="w-6 h-6"></i>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span class="text-indigo-600 font-semibold mr-1">활성 품목</span> 기준
-                    </div>
-                </div>
+/* 업로드 */
+.stack{display:flex;flex-direction:column;gap:14px}
+.drop{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 20px;border:1.5px dashed var(--dash);border-radius:12px;background:var(--surface);text-align:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop p{margin:0}
+.drop .big{font-weight:600;font-size:15px}
+.drop .hint{color:var(--muted);font-size:12px}
+.acts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.msg{font-size:13px;min-height:20px}
+.msg.err{color:var(--crit)}
+.msg.ok{color:var(--good)}
+.colw{overflow-x:auto}
+.ct{border-collapse:collapse;width:100%;font-size:13px}
+.ct th{text-align:left;font-weight:600;font-size:12px;color:var(--muted);padding:6px 12px 6px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.ct td{padding:8px 12px 8px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.ct td.ex{font-family:var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap}
 
-                <!-- Card 2 -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">총 재고 자산 가치</p>
-                            <h3 id="kpiTotalValue" class="text-2xl font-bold text-slate-900 mt-1">₩ 0</h3>
-                        </div>
-                        <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-emerald-600">
-                            <i data-lucide="coins" class="w-6 h-6"></i>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span class="text-emerald-600 font-semibold mr-1">수량 × 단가</span> 합계 금액
-                    </div>
-                </div>
+@media (max-width:960px){
+  .s4,.s6,.s8{grid-column:span 12}
+}
+@media (max-width:760px){
+  .app{flex-direction:column}
+  .side{width:auto;flex-direction:row;align-items:center;gap:8px;padding:10px 16px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden}
+  .brand{padding:0}
+  .brand-sub,.datacard{display:none}
+  .nav{flex-direction:row;gap:4px}
+  .nav-item{width:auto;white-space:nowrap}
+  .main{padding:18px 16px 40px}
+  .tw{max-height:70vh}
+  .count{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
 
-                <!-- Card 3 -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">총 재고 수량</p>
-                            <h3 id="kpiTotalQty" class="text-2xl font-bold text-slate-900 mt-1">0 EA</h3>
-                        </div>
-                        <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-amber-600">
-                            <i data-lucide="layers" class="w-6 h-6"></i>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span class="text-amber-600 font-semibold mr-1">전체 창고</span> 누적 수량
-                    </div>
-                </div>
-
-                <!-- Card 4 -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">안전재고 부족 경고</p>
-                            <h3 id="kpiLowStock" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
-                        </div>
-                        <div class="bg-rose-50 p-3 rounded-xl border border-rose-100 text-rose-600">
-                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span class="text-rose-600 font-semibold mr-1">즉시 발주</span> 필요 품목
-                    </div>
-                </div>
-            </section>
-
-            <!-- Charts Section -->
-            <section id="chartSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Bar Chart -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col lg:col-span-2">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-600"></i> 품목별 재고 수량 비교
-                            </h2>
-                            <p class="text-xs text-slate-400">상위 품목의 현재고 수량 분석</p>
-                        </div>
-                        <span class="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">Top Items</span>
-                    </div>
-                    <div class="relative flex-1 w-full h-72">
-                        <canvas id="barChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Doughnut Chart -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-600"></i> 카테고리별 자산 비중
-                            </h2>
-                            <p class="text-xs text-slate-400">전체 재고 금액 기준</p>
-                        </div>
-                    </div>
-                    <div class="relative flex-1 w-full h-72 flex items-center justify-center">
-                        <canvas id="doughnutChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Line Chart -->
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col lg:col-span-3">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <i data-lucide="line-chart" class="w-4 h-4 text-indigo-600"></i> 품목별 단가 및 총자산 비교 분석
-                            </h2>
-                            <p class="text-xs text-slate-400">단가와 총금액 간의 상관관계 트렌드</p>
-                        </div>
-                    </div>
-                    <div class="relative flex-1 w-full h-72">
-                        <canvas id="lineChart"></canvas>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Data Table Section -->
-            <section id="tableSection" class="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div class="flex items-center space-x-3 w-full md:w-auto">
-                        <div class="bg-indigo-50 p-2 rounded-xl text-indigo-600 border border-indigo-100">
-                            <i data-lucide="table" class="w-5 h-5"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-base font-bold text-slate-900">재고 데이터 세부 내역</h2>
-                            <p id="rowCountLabel" class="text-xs text-slate-400">총 0개 항목이 로드되었습니다.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
-                        <div class="relative w-full md:w-64">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                <i data-lucide="search" class="w-4 h-4"></i>
-                            </span>
-                            <input type="text" id="searchInput" placeholder="품목명, 카테고리 검색..." 
-                                class="w-full bg-slate-50 border border-slate-200 text-sm rounded-xl pl-9 pr-4 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto custom-scrollbar max-h-[500px]">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-slate-50 sticky top-0 z-10 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                            <tr id="tableHeaderRow">
-                                <!-- Dynamic Headers -->
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody" class="divide-y divide-slate-100 text-sm text-slate-600">
-                            <tr>
-                                <td colspan="100" class="text-center py-12 text-slate-400">
-                                    <div class="flex flex-col items-center justify-center space-y-3">
-                                        <i data-lucide="folder-open" class="w-10 h-10 text-slate-300"></i>
-                                        <p>표시할 재고 데이터가 없습니다. 좌측 메뉴의 <strong class="text-slate-700">"샘플 데이터 로드"</strong> 또는 <strong class="text-slate-700">"엑셀 파일 업로드"</strong>를 이용해주세요.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <span id="tablePaginationInfo">0 / 0 항목 표시 중</span>
-                    <div class="flex items-center space-x-2">
-                        <button id="prevPageBtn" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition">이전</button>
-                        <span id="pageIndicator" class="px-2 font-medium">1 / 1</span>
-                        <button id="nextPageBtn" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition">다음</button>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-
-        <!-- Footer -->
-        <footer class="mt-auto border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
-            &copy; 2026 StockPulse Inventory Dashboard. Designed with Light Theme & Sidebar UI.
-        </footer>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="9" width="3" height="7" rx="1" fill="#fff"/><rect x="7.5" y="5" width="3" height="11" rx="1" fill="#fff"/><rect x="13" y="2" width="3" height="14" rx="1" fill="#fff"/></svg>
+      </span>
+      <div><div class="brand-name">재고 현황</div><div class="brand-sub">대시보드</div></div>
     </div>
+    <nav class="nav" aria-label="메뉴">
+      <button type="button" class="nav-item" data-view="dashboard">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="6" height="7" rx="1.5"/><rect x="10" y="2" width="6" height="4" rx="1.5"/><rect x="2" y="11" width="6" height="5" rx="1.5"/><rect x="10" y="8" width="6" height="8" rx="1.5"/></svg>
+        <span>대시보드</span>
+      </button>
+      <button type="button" class="nav-item" data-view="detail">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="14" height="12" rx="1.5"/><path d="M2 7.5h14M2 11.5h14M7 7.5V15"/></svg>
+        <span>상세보기</span>
+      </button>
+      <button type="button" class="nav-item" data-view="upload">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12V3m0 0L5.5 6.5M9 3l3.5 3.5"/><path d="M3 12v2.5A1.5 1.5 0 0 0 4.5 16h9a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+        <span>엑셀 업로드</span>
+      </button>
+    </nav>
+    <div class="datacard">
+      <div class="dc-label">현재 데이터</div>
+      <div class="dc-name" id="dcName"></div>
+      <div class="dc-meta" id="dcMeta"></div>
+    </div>
+  </aside>
 
-    <!-- Script Application Logic -->
-    <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
+  <main class="main" id="main">
+    <header class="top">
+      <div>
+        <h1 id="vTitle"></h1>
+        <p id="vDesc"></p>
+      </div>
+      <div class="top-r">
+        <div class="fld inl" id="sheetWrap" hidden>
+          <label for="selSheet">시트</label>
+          <select id="selSheet" class="sel"></select>
+        </div>
+        <span class="chip" id="srcChip"></span>
+      </div>
+    </header>
 
-        // Application State
-        let rawData = [];
-        let filteredData = [];
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        
-        let barChartInstance = null;
-        let doughnutChartInstance = null;
-        let lineChartInstance = null;
+    <section id="v-dashboard">
+      <div class="note" id="sampleNote">
+        <span>예시 데이터를 보고 있습니다. 파일을 올리면 내 데이터로 바뀝니다.</span>
+        <button type="button" class="linkbtn" data-go="upload">엑셀 파일 올리기</button>
+      </div>
+      <div class="ctrls" id="dashCtrls">
+        <div class="fld"><label for="selMetric">수치 열</label><select id="selMetric" class="sel"></select></div>
+        <div class="fld"><label for="selGroup">묶는 기준</label><select id="selGroup" class="sel"></select></div>
+        <div class="fld"><label for="selAgg">집계 방식</label>
+          <select id="selAgg" class="sel"><option value="sum">합계</option><option value="avg">평균</option></select>
+        </div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="cgrid" id="charts">
+        <div class="card s8">
+          <h2 id="tBar"></h2><p class="sub" id="sBar"></p>
+          <div class="cbox"><canvas id="cBar" aria-label="기준별 집계 막대 차트" role="img"></canvas></div>
+        </div>
+        <div class="card s4">
+          <h2>비중</h2><p class="sub" id="sPie"></p>
+          <div class="cbox"><canvas id="cPie" aria-label="기준별 비중 도넛 차트" role="img"></canvas></div>
+        </div>
+        <div class="card s6" id="cardTop">
+          <h2 id="tTop"></h2><p class="sub">값이 큰 행 10개</p>
+          <div class="cbox"><canvas id="cTop" aria-label="상위 10개 막대 차트" role="img"></canvas></div>
+        </div>
+        <div class="card s6" id="cardShort">
+          <h2>안전재고 대비 현재고</h2><p class="sub">현재고 비율이 낮은 8개</p>
+          <div class="lg"><span class="a"><i></i>현재고</span><span class="b"><i></i>안전재고 미달</span><span class="c"><i></i>안전재고</span></div>
+          <div class="cbox"><canvas id="cShort" aria-label="안전재고 대비 현재고 막대 차트" role="img"></canvas></div>
+        </div>
+      </div>
+      <div class="card" id="noNum" hidden>
+        <h2>차트를 만들 수 없습니다</h2>
+        <p class="sub">이 시트에는 수치형 열이 없습니다. 상세보기에서 표로 확인하세요.</p>
+      </div>
+    </section>
 
-        // Sample Inventory Data Generator
-        const sampleData = [
-            { id: "P-1001", name: "울트라 울 코트", category: "의류", quantity: 120, unitPrice: 150000, safetyStock: 30, warehouse: "서울물류센터", date: "2026-03-01" },
-            { id: "P-1002", name: "프리미엄 무선 키보드", category: "전자제품", quantity: 45, unitPrice: 89000, safetyStock: 50, warehouse: "경기물류센터", date: "2026-03-02" },
-            { id: "P-1003", name: "인체공학 오피스 체어", category: "가구", quantity: 15, unitPrice: 280000, safetyStock: 20, warehouse: "부산물류센터", date: "2026-03-03" },
-            { id: "P-1004", name: "4K 울트라와이드 모니터", category: "전자제품", quantity: 8, unitPrice: 650000, safetyStock: 15, warehouse: "서울물류센터", date: "2026-03-04" },
-            { id: "P-1005", name: "미니멀 스탠드 조명", category: "인테리어", quantity: 210, unitPrice: 45000, safetyStock: 40, warehouse: "경기물류센터", date: "2026-03-05" },
-            { id: "P-1006", name: "스테인리스 텀블러", category: "생활용품", quantity: 340, unitPrice: 28000, safetyStock: 100, warehouse: "부산물류센터", date: "2026-03-06" },
-            { id: "P-1007", name: "블루투스 노이즈캔슬링 헤드셋", category: "전자제품", quantity: 65, unitPrice: 199000, safetyStock: 30, warehouse: "서울물류센터", date: "2026-03-07" },
-            { id: "P-1008", name: "원목 2단 협탁", category: "가구", quantity: 22, unitPrice: 95000, safetyStock: 25, warehouse: "경기물류센터", date: "2026-03-08" },
-            { id: "P-1009", name: "오가닉 코튼 후드티", category: "의류", quantity: 180, unitPrice: 62000, safetyStock: 50, warehouse: "부산물류센터", date: "2026-03-09" },
-            { id: "P-1010", name: "초고속 다포트 충전기", category: "전자제품", quantity: 510, unitPrice: 35000, safetyStock: 120, warehouse: "서울물류센터", date: "2026-03-10" },
-            { id: "P-1011", name: "천연 아로마 디퓨저", category: "생활용품", quantity: 95, unitPrice: 24000, safetyStock: 35, warehouse: "경기물류센터", date: "2026-03-11" },
-            { id: "P-1012", name: "북유럽풍 패브릭 소파", category: "가구", quantity: 5, unitPrice: 890000, safetyStock: 10, warehouse: "부산물류센터", date: "2026-03-12" }
-        ];
+    <section id="v-detail" hidden>
+      <div class="tools">
+        <input id="q" class="search" type="search" placeholder="전체 열에서 검색" aria-label="검색">
+        <label class="chk" id="shortWrap" hidden><input type="checkbox" id="onlyShort"> 안전재고 미달만 보기</label>
+        <div class="fld inl"><label for="selSize">표시 행</label>
+          <select id="selSize" class="sel"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+        </div>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="tw"><table class="t" id="tbl"></table></div>
+      <div class="pager">
+        <button type="button" class="btn" id="prev">이전</button>
+        <span id="pgInfo"></span>
+        <button type="button" class="btn" id="next">다음</button>
+      </div>
+    </section>
 
-        // UI Toast Notifications
-        function showToast(text) {
-            const toast = document.getElementById('toastMessage');
-            document.getElementById('toastText').innerText = text;
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 4000);
-        }
+    <section id="v-upload" hidden>
+      <div class="stack">
+        <div class="drop" id="drop">
+          <p class="big">엑셀 파일을 끌어다 놓으세요</p>
+          <p class="hint">.xlsx, .xls, .csv(UTF-8) 형식을 읽습니다. 파일은 이 화면 안에서만 처리됩니다.</p>
+          <div class="acts">
+            <button type="button" class="btn primary" id="pick">파일 선택</button>
+            <button type="button" class="btn" id="useSample">예시 데이터로 되돌리기</button>
+          </div>
+          <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" hidden>
+        </div>
+        <div class="msg" id="msg" role="status" aria-live="polite"></div>
+        <div class="card">
+          <h2>인식된 열</h2>
+          <p class="sub">열마다 숫자, 문자, 날짜 중 하나로 읽고 그에 맞게 표시합니다.</p>
+          <div class="colw"><table class="ct" id="colTbl"></table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
 
-        function hideToast() {
-            document.getElementById('toastMessage').classList.add('hidden');
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+'use strict';
+const NF=new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2});
+const CF=new Intl.NumberFormat('ko-KR',{notation:'compact',maximumFractionDigits:1});
+const $=id=>document.getElementById(id);
+const TY={number:'숫자',text:'문자',date:'날짜'};
+const IDRE=/(코드|번호|아이디|우편|연락처|바코드|\bid\b|code|sku|barcode)/i;
+const NUMRE=/^[-+]?\d{1,3}(,\d{3})+(\.\d+)?$|^[-+]?\d+(\.\d+)?$/;
+const DATERE=/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/;
+const VIEWS={
+  dashboard:['대시보드','수치 열은 차트로, 묶는 기준별로 비교해서 보여 줍니다.'],
+  detail:['상세보기','열 형식에 맞춰 표로 보여 줍니다. 열 이름을 누르면 정렬됩니다.'],
+  upload:['엑셀 업로드','첫 번째 시트의 첫 행을 열 이름으로 읽습니다.']
+};
+const S={view:'dashboard',name:'',sample:true,sheet:'',wb:null,headers:[],types:[],rows:[],
+  sort:{col:-1,dir:1},page:0,size:20,q:'',onlyShort:false,metric:-1,group:-1,agg:'sum',stock:-1,safe:-1,label:-1};
+const CH={};
+const p2=n=>('0'+n).slice(-2);
+const fmtDate=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-        // Sample Data Load Event
-        document.getElementById('sampleBtn').addEventListener('click', () => {
-            rawData = sampleData.map(item => ({
-                ...item,
-                totalAmount: item.quantity * item.unitPrice
-            }));
-            filteredData = [...rawData];
-            currentPage = 1;
-            updateDashboard();
-            showToast("샘플 재고 데이터 12건이 로드되었습니다.");
-        });
+/* ---------- 예시 데이터 ---------- */
+function sampleData(){
+  let s=20261013;
+  const rnd=()=>{s=(s+0x6D2B79F5)|0;let t=Math.imul(s^(s>>>15),1|s);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};
+  const cats=[
+    ['전자부품','EL',[['저항 10kΩ','개',20,60,8000],['세라믹 커패시터 100nF','개',30,90,6000],['전해 커패시터 100μF','개',120,300,2500],['MCU 32비트 보드','개',3800,6200,300],['6핀 커넥터','개',150,400,3000],['12V 릴레이','개',900,1800,600],['LED 모듈 5mm','개',60,150,4000],['온도 센서 모듈','개',1800,3400,500]]],
+    ['포장재','PK',[['골판지 박스 M','장',450,900,1800],['에어캡 롤','롤',7000,12000,120],['박스 테이프 48mm','롤',900,1600,500],['스트레치 필름','롤',5500,9000,160],['완충 폼 시트','장',300,700,900],['PE 지퍼백 20×30','팩',2500,4800,260]]],
+    ['공구','TL',[['토크 렌치','개',48000,95000,25],['정밀 드라이버 세트','세트',12000,28000,60],['디지털 캘리퍼스','개',22000,45000,40],['육각렌치 세트','세트',6000,15000,90],['전동 드릴','대',85000,160000,18],['줄자 5m','개',2500,6000,150]]],
+    ['소모품','CS',[['면장갑','켤레',700,1500,1200],['KF94 마스크','장',350,700,3000],['윤활 스프레이','캔',2800,6500,300],['세척제 1L','병',3500,8000,200],['라벨 용지','권',4000,9000,180],['결속밴드 300mm','봉',1800,3500,400]]],
+    ['원자재','RM',[['알루미늄 판재 2T','장',38000,62000,90],['스테인리스 파이프','m',4200,8500,600],['구리선 1.5sq','롤',56000,98000,40],['ABS 펠릿 25kg','포',52000,78000,70],['고무 패킹','개',400,1100,2200],['PVC 호스 1/2인치','m',900,2100,800]]]
+  ];
+  const wh=['A동','B동','C동'];
+  const rows=[];
+  cats.forEach(c=>c[2].forEach((it,k)=>{
+    const safe=Math.max(5,Math.round(it[4]*0.3*(0.7+rnd()*0.6)));
+    const stock=Math.round(safe*(0.35+rnd()*2.6));
+    let p=it[2]+rnd()*(it[3]-it[2]);
+    p=p>=1000?Math.round(p/10)*10:Math.round(p);
+    const d=new Date(2026,8,1+Math.floor(rnd()*42));
+    rows.push([c[1]+'-'+('00'+(k+1)).slice(-3),it[0],c[0],wh[Math.floor(rnd()*3)],it[1],stock,safe,p,stock*p,d]);
+  }));
+  return {headers:['품목코드','품명','분류','창고','단위','현재고','안전재고','단가(원)','재고금액(원)','최근 입고일'],rows:rows};
+}
 
-        // Excel File Upload Parser
-        document.getElementById('excelFile').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+/* ---------- 표 만들기 · 형식 판별 ---------- */
+function inferType(h,vals){
+  const v=vals.filter(x=>x!==null);
+  if(!v.length||IDRE.test(h))return 'text';
+  let nn=0,nd=0;
+  v.forEach(x=>{
+    if(x instanceof Date)nd++;
+    else if(typeof x==='number'&&isFinite(x))nn++;
+    else if(typeof x==='string'){const t=x.replace(/\s/g,'');if(DATERE.test(t))nd++;else if(NUMRE.test(t))nn++;}
+  });
+  if(nd/v.length>=0.9)return 'date';
+  if(nn/v.length>=0.9)return 'number';
+  return 'text';
+}
+function convert(x,t){
+  if(x===null)return null;
+  if(t==='number'){
+    if(typeof x==='number')return isFinite(x)?x:null;
+    if(typeof x==='string'){const n=Number(x.replace(/[,\s]/g,''));return isFinite(n)?n:null;}
+    return null;
+  }
+  if(t==='date'){
+    if(x instanceof Date)return isNaN(x)?null:new Date(x.getTime()+60000);
+    if(typeof x==='string'){const m=x.replace(/\s/g,'').match(DATERE);if(m)return new Date(+m[1],+m[2]-1,+m[3]);}
+    return null;
+  }
+  if(x instanceof Date)return fmtDate(x);
+  return String(x);
+}
+function buildTable(rawHeaders,aoa){
+  const headers=rawHeaders.map((h,i)=>{const t=(h==null?'':String(h)).trim();return t||('열'+(i+1));});
+  const seen={};
+  headers.forEach((h,i)=>{if(seen[h]){seen[h]++;headers[i]=h+' ('+seen[h]+')';}else seen[h]=1;});
+  const n=headers.length;
+  const rows=aoa.map(r=>{
+    const o=[];
+    for(let i=0;i<n;i++){
+      let v=r[i];
+      if(v===undefined||v==='')v=null;
+      if(typeof v==='string'){v=v.trim();if(v==='')v=null;}
+      o.push(v);
+    }
+    return o;
+  }).filter(r=>r.some(v=>v!==null));
+  const types=headers.map((h,c)=>inferType(h,rows.map(r=>r[c])));
+  types.forEach((t,c)=>rows.forEach(r=>{r[c]=convert(r[c],t);}));
+  return {headers:headers,types:types,rows:rows};
+}
+function uniq(c){const s=new Set();S.rows.forEach(r=>{if(r[c]!==null)s.add(r[c]);});return s.size;}
+function detect(){
+  const H=S.headers,T=S.types,n=H.length;
+  const find=(re,skip)=>{for(let i=0;i<n;i++){if(T[i]==='number'&&i!==skip&&re.test(H[i]))return i;}return -1;};
+  S.stock=find(/(현재고|재고\s*수량|현재\s*수량|재고량|^재고$|^stock$|on.?hand)/i,-1);
+  S.safe=find(/(안전\s*재고|안전\s*수량|최소\s*재고|safety|reorder|min\s*stock)/i,S.stock);
+  const nums=[],txts=[];
+  for(let i=0;i<n;i++){if(T[i]==='number')nums.push(i);else if(T[i]==='text')txts.push(i);}
+  S.metric=-1;
+  [/재고\s*금액|금액|amount|value/i,/현재고|재고|수량|qty|stock/i].some(re=>{
+    const i=nums.find(j=>re.test(H[j]));
+    if(i!==undefined){S.metric=i;return true;}
+    return false;
+  });
+  if(S.metric<0&&nums.length)S.metric=nums[0];
+  const g=txts.find(c=>{const u=uniq(c);return u>=2&&u<=12;});
+  S.group=g!==undefined?g:(txts.length?txts[0]:-1);
+  const pref=txts.find(c=>/(품명|이름|명칭|제품|상품|품목|name)/i.test(H[c])&&!IDRE.test(H[c]));
+  if(pref!==undefined)S.label=pref;
+  else{let best=-1,bu=0;txts.forEach(c=>{const u=uniq(c);if(u>bu){bu=u;best=c;}});S.label=best;}
+}
+const hasShort=()=>S.stock>=0&&S.safe>=0;
+const isShort=r=>hasShort()&&r[S.stock]!==null&&r[S.safe]!==null&&r[S.stock]<r[S.safe];
+const rowLabel=i=>(S.label>=0&&S.rows[i][S.label]!==null)?String(S.rows[i][S.label]):'행 '+(i+1);
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
+/* ---------- 불러오기 ---------- */
+function load(rawHeaders,aoa,name,isSample){
+  const t=buildTable(rawHeaders,aoa);
+  S.headers=t.headers;S.types=t.types;S.rows=t.rows;S.name=name;S.sample=isSample;
+  S.sort={col:-1,dir:1};S.page=0;S.q='';S.onlyShort=false;S.agg='sum';
+  $('q').value='';$('onlyShort').checked=false;$('selAgg').value='sum';
+  detect();
+  refreshChrome();
+  renderUploadCols();
+}
+function loadSample(){
+  const d=sampleData();
+  S.wb=null;S.sheet='';
+  load(d.headers,d.rows,'예시 데이터',true);
+}
+function loadSheet(name){
+  const aoa=XLSX.utils.sheet_to_json(S.wb.Sheets[name],{header:1,raw:true,defval:null,blankrows:false});
+  if(aoa.length<2){msg('“'+name+'” 시트에 데이터가 없습니다. 첫 행에 열 이름, 아래 행에 값이 있는지 확인하세요.','err');return false;}
+  S.sheet=name;
+  load(aoa[0],aoa.slice(1),S.fileName,false);
+  return true;
+}
+function msg(t,kind){const m=$('msg');m.textContent=t;m.className='msg'+(kind?' '+kind:'');}
+function handleFile(file){
+  msg('');
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(['xlsx','xls','csv'].indexOf(ext)<0){msg('엑셀(.xlsx, .xls) 또는 CSV 파일만 올릴 수 있습니다.','err');return;}
+  if(typeof XLSX==='undefined'){msg('엑셀 읽기 도구를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도하세요.','err');return;}
+  const fr=new FileReader();
+  fr.onerror=()=>msg('파일을 읽지 못했습니다. 다른 프로그램에서 열려 있지 않은지 확인하고 다시 올려 주세요.','err');
+  fr.onload=()=>{
+    try{
+      const wb=ext==='csv'?XLSX.read(fr.result,{type:'string',cellDates:true}):XLSX.read(fr.result,{type:'array',cellDates:true});
+      if(!wb.SheetNames.length){msg('시트를 찾지 못했습니다.','err');return;}
+      const prev={wb:S.wb,fileName:S.fileName};
+      S.wb=wb;S.fileName=file.name;
+      if(!loadSheet(wb.SheetNames[0])){S.wb=prev.wb;S.fileName=prev.fileName;return;}
+      msg('');
+      show('dashboard');
+    }catch(e){
+      msg('파일을 해석하지 못했습니다. 손상되었거나 암호가 걸린 파일일 수 있습니다.','err');
+    }
+  };
+  if(ext==='csv')fr.readAsText(file,'utf-8');else fr.readAsArrayBuffer(file);
+}
 
-                    if (json.length === 0) {
-                        alert("업로드된 엑셀 파일에 데이터가 없습니다.");
-                        return;
-                    }
+/* ---------- 화면 공통 ---------- */
+function fillSel(sel,idxs,cur,emptyLabel){
+  if(!idxs.length){sel.innerHTML='<option value="-1">'+emptyLabel+'</option>';return;}
+  sel.innerHTML=idxs.map(i=>'<option value="'+i+'">'+esc(S.headers[i])+'</option>').join('');
+  if(cur>=0)sel.value=String(cur);
+}
+function refreshChrome(){
+  $('dcName').textContent=S.name;
+  $('dcMeta').textContent=NF.format(S.rows.length)+'행 · '+S.headers.length+'열';
+  const chip=$('srcChip');
+  chip.textContent=S.sample?'예시 데이터':S.name+(S.wb&&S.wb.SheetNames.length>1?' · '+S.sheet:'');
+  chip.title=chip.textContent;
+  chip.className='chip'+(S.sample?' sample':'');
+  $('sampleNote').hidden=!S.sample;
+  $('shortWrap').hidden=!hasShort();
+  const multi=!!(S.wb&&S.wb.SheetNames.length>1);
+  $('sheetWrap').hidden=!multi;
+  if(multi){
+    $('selSheet').innerHTML=S.wb.SheetNames.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+    $('selSheet').value=S.sheet;
+  }
+  const nums=[],txts=[];
+  S.types.forEach((t,i)=>{if(t==='number')nums.push(i);else if(t==='text')txts.push(i);});
+  fillSel($('selMetric'),nums,S.metric,'수치 열 없음');
+  fillSel($('selGroup'),txts,S.group,'전체');
+  if(S.view==='dashboard')renderDash();
+  if(S.view==='detail')renderTable();
+}
+function show(v){
+  if(!VIEWS[v])v='dashboard';
+  S.view=v;
+  ['dashboard','detail','upload'].forEach(k=>{$('v-'+k).hidden=(k!==v);});
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    if(b.dataset.view===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  $('vTitle').textContent=VIEWS[v][0];
+  $('vDesc').textContent=VIEWS[v][1];
+  try{history.replaceState(null,'','#'+v);}catch(e){}
+  if(v==='dashboard')renderDash();
+  if(v==='detail')renderTable();
+  $('main').scrollTop=0;
+}
 
-                    rawData = json.map((row, index) => {
-                        const id = row['품목코드'] || row['ID'] || row['id'] || `P-${2000 + index}`;
-                        const name = row['품목명'] || row['상품명'] || row['name'] || `상품 ${index + 1}`;
-                        const category = row['카테고리'] || row['분류'] || row['category'] || '기타';
-                        const quantity = Number(row['재고수량'] || row['수량'] || row['quantity'] || 0);
-                        const unitPrice = Number(row['단가'] || row['가격'] || row['unitPrice'] || 0);
-                        const safetyStock = Number(row['안전재고'] || row['safetyStock'] || 20);
-                        const warehouse = row['창고'] || row['보관장소'] || row['warehouse'] || '본사물류';
-                        const date = row['입고일자'] || row['날짜'] || row['date'] || '2026-03-01';
+/* ---------- 대시보드 ---------- */
+function aggBy(g,m,agg){
+  const map=new Map();
+  S.rows.forEach(r=>{
+    const v=r[m];if(v===null)return;
+    const k=g<0?'전체':(r[g]===null?'(빈 값)':String(r[g]));
+    const o=map.get(k)||{s:0,n:0};o.s+=v;o.n++;map.set(k,o);
+  });
+  return Array.from(map).map(e=>({k:e[0],v:agg==='avg'?e[1].s/e[1].n:e[1].s})).sort((a,b)=>b.v-a.v);
+}
+const big=v=>Math.abs(v)>=1e8?CF.format(v):NF.format(v);
+function kpi(l,v,s,alert,t){
+  return '<div class="kpi'+(alert?' alert':'')+'"><div class="kpi-l">'+esc(l)+'</div><div class="kpi-v"'+(t?' title="'+esc(t)+'"':'')+'>'+v+'</div><div class="kpi-s">'+s+'</div></div>';
+}
+function renderKpis(){
+  let h=kpi('전체 행 수',NF.format(S.rows.length)+'<small>행</small>',S.headers.length+'개 열');
+  if(S.metric>=0){
+    const m=S.metric,mn=S.headers[m];
+    let sum=0,cnt=0,max=-Infinity,mi=-1;
+    S.rows.forEach((r,i)=>{const v=r[m];if(v===null)return;sum+=v;cnt++;if(v>max){max=v;mi=i;}});
+    h+=kpi(mn+' 합계',big(sum),'값이 있는 '+NF.format(cnt)+'행 합산',false,NF.format(sum));
+    h+=kpi(mn+' 평균',big(cnt?sum/cnt:0),NF.format(cnt)+'행 평균',false,NF.format(cnt?sum/cnt:0));
+    if(hasShort()){
+      const n=S.rows.filter(isShort).length;
+      const pct=S.rows.length?Math.round(n/S.rows.length*100):0;
+      h+=kpi('안전재고 미달',NF.format(n)+'<small>건</small>','전체의 '+pct+'%',n>0);
+    }else if(mi>=0){
+      h+=kpi(mn+' 최댓값',big(max),esc(rowLabel(mi)),false,NF.format(max));
+    }
+  }
+  $('kpis').innerHTML=h;
+}
+function put(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart($(id),cfg);}
+function renderDash(){
+  const has=S.metric>=0;
+  $('dashCtrls').hidden=!has;$('charts').hidden=!has;$('noNum').hidden=has;
+  renderKpis();
+  if(!has||typeof Chart==='undefined')return;
+  const cs=getComputedStyle(document.documentElement);
+  const tok=k=>cs.getPropertyValue(k).trim();
+  Chart.defaults.font.family=tok('--font-body');
+  Chart.defaults.font.size=12;
+  Chart.defaults.color=tok('--muted');
+  Chart.defaults.borderColor=tok('--line');
+  const pal=['--c1','--c2','--c3','--c4','--c5','--c6'].map(tok);
+  const mName=S.headers[S.metric];
+  const gName=S.group>=0?S.headers[S.group]:'전체';
+  const base={responsive:true,maintainAspectRatio:false};
 
-                        return {
-                            id,
-                            name,
-                            category,
-                            quantity,
-                            unitPrice,
-                            totalAmount: quantity * unitPrice,
-                            safetyStock,
-                            warehouse,
-                            date
-                        };
-                    });
+  const all=aggBy(S.group,S.metric,S.agg);
+  const top=all.slice(0,12);
+  $('tBar').textContent=gName+'별 '+mName+' '+(S.agg==='avg'?'평균':'합계');
+  $('sBar').textContent=all.length>12?'값이 큰 상위 12개 (전체 '+all.length+'개)':'값이 큰 순서';
+  put('cBar',{type:'bar',
+    data:{labels:top.map(d=>d.k),datasets:[{data:top.map(d=>d.v),backgroundColor:pal[0],borderRadius:4,maxBarThickness:44}]},
+    options:Object.assign({},base,{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+NF.format(c.parsed.y)}}},
+      scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{callback:x=>CF.format(x)}}}
+    })});
 
-                    filteredData = [...rawData];
-                    currentPage = 1;
-                    updateDashboard();
-                    showToast(`엑셀 파일(${file.name})에서 ${rawData.length}개 데이터를 성공적으로 불러왔습니다.`);
-                } catch (err) {
-                    console.error(err);
-                    alert("엑셀 파일 파싱 중 오류가 발생했습니다.");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });
+  const sums=aggBy(S.group,S.metric,'sum').filter(d=>d.v>0);
+  let ds=sums.slice(0,6);
+  if(sums.length>6)ds=sums.slice(0,5).concat([{k:'기타',v:sums.slice(5).reduce((a,d)=>a+d.v,0)}]);
+  const tot=ds.reduce((a,d)=>a+d.v,0)||1;
+  $('sPie').textContent=gName+' · '+mName+' 합계 기준';
+  put('cPie',{type:'doughnut',
+    data:{labels:ds.map(d=>d.k),datasets:[{data:ds.map(d=>d.v),backgroundColor:ds.map((d,i)=>d.k==='기타'&&sums.length>6?tok('--other'):pal[i%pal.length]),borderWidth:2,borderColor:tok('--surface')}]},
+    options:Object.assign({},base,{
+      cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,boxHeight:10,padding:12}},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+NF.format(c.parsed)+' ('+Math.round(c.parsed/tot*100)+'%)'}}}
+    })});
 
-        // Search Filter Event
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase();
-            filteredData = rawData.filter(item => 
-                String(item.name).toLowerCase().includes(keyword) ||
-                String(item.category).toLowerCase().includes(keyword) ||
-                String(item.warehouse).toLowerCase().includes(keyword) ||
-                String(item.id).toLowerCase().includes(keyword)
-            );
-            currentPage = 1;
-            renderTable();
-            updatePaginationInfo();
-        });
+  const trunc=function(v){const l=String(this.getLabelForValue(v));return l.length>14?l.slice(0,13)+'…':l;};
+  const idx=S.rows.map((r,i)=>i).filter(i=>S.rows[i][S.metric]!==null).sort((a,b)=>S.rows[b][S.metric]-S.rows[a][S.metric]).slice(0,10);
+  $('tTop').textContent=mName+' 상위 10';
+  put('cTop',{type:'bar',
+    data:{labels:idx.map(rowLabel),datasets:[{data:idx.map(i=>S.rows[i][S.metric]),backgroundColor:pal[1],borderRadius:3,maxBarThickness:22}]},
+    options:Object.assign({},base,{
+      indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+NF.format(c.parsed.x)}}},
+      scales:{x:{beginAtZero:true,ticks:{callback:x=>CF.format(x)}},y:{grid:{display:false},ticks:{callback:trunc}}}
+    })});
 
-        // Dashboard Updater
-        function updateDashboard() {
-            updateKPIs();
-            renderCharts();
-            renderTable();
-            updatePaginationInfo();
-        }
+  let arr=[];
+  if(hasShort()){
+    S.rows.forEach((r,i)=>{const a=r[S.stock],b=r[S.safe];if(a!==null&&b!==null&&b>0)arr.push({i:i,a:a,b:b,q:a/b});});
+    arr.sort((x,y)=>x.q-y.q);arr=arr.slice(0,8);
+  }
+  const showShort=arr.length>0;
+  $('cardShort').hidden=!showShort;
+  $('cardTop').className='card '+(showShort?'s6':'s12');
+  if(showShort){
+    put('cShort',{type:'bar',
+      data:{labels:arr.map(d=>rowLabel(d.i)),datasets:[
+        {label:S.headers[S.stock],data:arr.map(d=>d.a),backgroundColor:arr.map(d=>d.a<d.b?tok('--crit'):pal[0]),borderRadius:3,barPercentage:.85,categoryPercentage:.8},
+        {label:S.headers[S.safe],data:arr.map(d=>d.b),backgroundColor:tok('--bar-neutral'),borderRadius:3,barPercentage:.85,categoryPercentage:.8}
+      ]},
+      options:Object.assign({},base,{
+        indexAxis:'y',
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+NF.format(c.parsed.x)}}},
+        scales:{x:{beginAtZero:true,ticks:{callback:x=>CF.format(x)}},y:{grid:{display:false},ticks:{callback:trunc}}}
+      })});
+  }
+}
 
-        // KPI Calculations
-        function updateKPIs() {
-            const totalItems = rawData.length;
-            const totalQty = rawData.reduce((acc, cur) => acc + (Number(cur.quantity) || 0), 0);
-            const totalVal = rawData.reduce((acc, cur) => acc + (Number(cur.totalAmount) || 0), 0);
-            const lowStockCount = rawData.filter(item => Number(item.quantity) <= Number(item.safetyStock)).length;
+/* ---------- 상세 표 ---------- */
+function viewIdx(){
+  const q=S.q.trim().toLowerCase();
+  let out=[];
+  for(let i=0;i<S.rows.length;i++){
+    const r=S.rows[i];
+    if(S.onlyShort&&!isShort(r))continue;
+    if(q){
+      let hit=false;
+      for(let c=0;c<r.length;c++){
+        const v=r[c];if(v===null)continue;
+        const s=(v instanceof Date)?fmtDate(v):(typeof v==='number'?String(v)+' '+NF.format(v):String(v));
+        if(s.toLowerCase().indexOf(q)>-1){hit=true;break;}
+      }
+      if(!hit)continue;
+    }
+    out.push(i);
+  }
+  if(S.sort.col>=0){
+    const c=S.sort.col,d=S.sort.dir,t=S.types[c];
+    out.sort((a,b)=>{
+      const x=S.rows[a][c],y=S.rows[b][c];
+      if(x===null&&y===null)return 0;
+      if(x===null)return 1;
+      if(y===null)return -1;
+      const r=t==='text'?String(x).localeCompare(String(y),'ko'):x-y;
+      return r*d;
+    });
+  }
+  return out;
+}
+function cell(c,v,r){
+  const t=S.types[c];
+  if(v===null)return '<td class="'+(t==='number'?'num':t==='date'?'dt':'txt')+'"><span class="nil">—</span></td>';
+  if(t==='number'){
+    const short=isShort(r)&&c===S.stock;
+    return '<td class="num'+(short?' short':'')+'">'+(short?'<span class="pill">부족</span>':'')+NF.format(v)+'</td>';
+  }
+  if(t==='date')return '<td class="dt">'+fmtDate(v)+'</td>';
+  return '<td class="txt" title="'+esc(v)+'">'+esc(v)+'</td>';
+}
+function renderTable(){
+  const idx=viewIdx();
+  const total=idx.length;
+  const pages=Math.max(1,Math.ceil(total/S.size));
+  if(S.page>=pages)S.page=pages-1;
+  if(S.page<0)S.page=0;
+  const start=S.page*S.size;
+  const slice=idx.slice(start,start+S.size);
+  let h='<thead><tr><th class="idx">#</th>';
+  S.headers.forEach((name,c)=>{
+    const t=S.types[c];
+    const on=S.sort.col===c;
+    h+='<th class="'+(t==='number'?'num':'')+'" aria-sort="'+(on?(S.sort.dir===1?'ascending':'descending'):'none')+'"><button type="button" class="th" data-c="'+c+'"><span>'+esc(name)+'</span><span class="ty">'+TY[t]+'</span><span class="arr">'+(on?(S.sort.dir===1?'▲':'▼'):'')+'</span></button></th>';
+  });
+  h+='</tr></thead><tbody>';
+  if(!slice.length){
+    h+='<tr><td class="empty" colspan="'+(S.headers.length+1)+'">조건에 맞는 행이 없습니다.</td></tr>';
+  }else{
+    slice.forEach(i=>{
+      const r=S.rows[i];
+      h+='<tr><td class="idx">'+(i+1)+'</td>';
+      for(let c=0;c<r.length;c++)h+=cell(c,r[c],r);
+      h+='</tr>';
+    });
+  }
+  h+='</tbody>';
+  $('tbl').innerHTML=h;
+  $('count').textContent=total===S.rows.length?'전체 '+NF.format(total)+'행':NF.format(total)+'행 / 전체 '+NF.format(S.rows.length)+'행';
+  $('pgInfo').textContent=(S.page+1)+' / '+pages;
+  $('prev').disabled=S.page<=0;
+  $('next').disabled=S.page>=pages-1;
+}
 
-            document.getElementById('kpiTotalItems').innerText = totalItems.toLocaleString() + " 개";
-            document.getElementById('kpiTotalQty').innerText = totalQty.toLocaleString() + " EA";
-            document.getElementById('kpiTotalValue').innerText = "₩ " + totalVal.toLocaleString();
-            document.getElementById('kpiLowStock').innerText = lowStockCount.toLocaleString() + " 건";
-        }
+/* ---------- 업로드 화면: 인식된 열 ---------- */
+function renderUploadCols(){
+  const how={number:'오른쪽 정렬 · 천 단위 쉼표 · 차트에 사용',text:'왼쪽 정렬 · 묶는 기준으로 사용',date:'yyyy-mm-dd 형식으로 표시'};
+  let h='<thead><tr><th>열 이름</th><th>형식</th><th>표시 방식</th><th>첫 값</th></tr></thead><tbody>';
+  S.headers.forEach((name,c)=>{
+    let ex='—';
+    for(let i=0;i<S.rows.length;i++){
+      const v=S.rows[i][c];
+      if(v!==null){ex=S.types[c]==='number'?NF.format(v):S.types[c]==='date'?fmtDate(v):String(v);break;}
+    }
+    h+='<tr><td>'+esc(name)+'</td><td>'+TY[S.types[c]]+'</td><td>'+how[S.types[c]]+'</td><td class="ex">'+esc(ex)+'</td></tr>';
+  });
+  $('colTbl').innerHTML=h+'</tbody>';
+}
 
-        // Render Data Table
-        function renderTable() {
-            const headerRow = document.getElementById('tableHeaderRow');
-            const tbody = document.getElementById('tableBody');
+/* ---------- 이벤트 ---------- */
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.go)));
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(VIEWS[v]&&v!==S.view)show(v);});
+$('selMetric').addEventListener('change',e=>{S.metric=+e.target.value;renderDash();});
+$('selGroup').addEventListener('change',e=>{S.group=+e.target.value;renderDash();});
+$('selAgg').addEventListener('change',e=>{S.agg=e.target.value;renderDash();});
+$('selSheet').addEventListener('change',e=>{if(S.wb)loadSheet(e.target.value);});
+$('q').addEventListener('input',e=>{S.q=e.target.value;S.page=0;renderTable();});
+$('onlyShort').addEventListener('change',e=>{S.onlyShort=e.target.checked;S.page=0;renderTable();});
+$('selSize').addEventListener('change',e=>{S.size=+e.target.value;S.page=0;renderTable();});
+$('prev').addEventListener('click',()=>{S.page--;renderTable();});
+$('next').addEventListener('click',()=>{S.page++;renderTable();});
+$('tbl').addEventListener('click',e=>{
+  const b=e.target.closest('.th');if(!b)return;
+  const c=+b.dataset.c;
+  if(S.sort.col===c)S.sort.dir*=-1;else S.sort={col:c,dir:1};
+  S.page=0;renderTable();
+});
+$('pick').addEventListener('click',()=>$('fileIn').click());
+$('fileIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)handleFile(f);e.target.value='';});
+$('useSample').addEventListener('click',()=>{loadSample();msg('예시 데이터로 되돌렸습니다.','ok');});
+const drop=$('drop');
+['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleFile(f);});
 
-            if (rawData.length === 0) {
-                headerRow.innerHTML = '';
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="100" class="text-center py-12 text-slate-400">
-                            <div class="flex flex-col items-center justify-center space-y-3">
-                                <i data-lucide="folder-open" class="w-10 h-10 text-slate-300"></i>
-                                <p>표시할 재고 데이터가 없습니다. 좌측 메뉴의 <strong class="text-slate-700">"샘플 데이터 로드"</strong> 또는 <strong class="text-slate-700">"엑셀 파일 업로드"</strong>를 이용해주세요.</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                lucide.createIcons();
-                return;
-            }
+loadSample();
+show(location.hash.slice(1));
+})();
+</script>
 
-            headerRow.innerHTML = `
-                <th class="px-6 py-3.5">품목코드</th>
-                <th class="px-6 py-3.5">품목명</th>
-                <th class="px-6 py-3.5">카테고리</th>
-                <th class="px-6 py-3.5 text-right">재고수량</th>
-                <th class="px-6 py-3.5 text-right">단가</th>
-                <th class="px-6 py-3.5 text-right">총금액</th>
-                <th class="px-6 py-3.5 text-center">안전재고</th>
-                <th class="px-6 py-3.5">창고 위치</th>
-                <th class="px-6 py-3.5">상태</th>
-            `;
-
-            const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            const paginatedItems = filteredData.slice(start, end);
-
-            if (paginatedItems.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="text-center py-10 text-slate-400">
-                            검색 결과가 존재하지 않습니다.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = paginatedItems.map(item => {
-                const isLow = Number(item.quantity) <= Number(item.safetyStock);
-                return `
-                    <tr class="hover:bg-slate-50/80 transition">
-                        <td class="px-6 py-4 font-mono text-xs text-indigo-600 font-semibold">${item.id}</td>
-                        <td class="px-6 py-4 font-medium text-slate-900">${item.name}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">${item.category}</span>
-                        </td>
-                        <td class="px-6 py-4 text-right font-semibold text-slate-900">${Number(item.quantity).toLocaleString()} EA</td>
-                        <td class="px-6 py-4 text-right text-slate-600">₩ ${Number(item.unitPrice).toLocaleString()}</td>
-                        <td class="px-6 py-4 text-right font-bold text-indigo-600">₩ ${Number(item.totalAmount).toLocaleString()}</td>
-                        <td class="px-6 py-4 text-center text-slate-500">${item.safetyStock}</td>
-                        <td class="px-6 py-4 text-slate-600">${item.warehouse}</td>
-                        <td class="px-6 py-4">
-                            ${isLow ? 
-                                '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>발주필요</span>' :
-                                '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>안정</span>'
-                            }
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // Pagination Info & Controls
-        function updatePaginationInfo() {
-            const total = filteredData.length;
-            const totalPages = Math.ceil(total / itemsPerPage) || 1;
-            
-            document.getElementById('rowCountLabel').innerText = `총 ${total}개 항목이 로드되었습니다.`;
-            document.getElementById('tablePaginationInfo').innerText = `전체 ${total}개 중 ${Math.min((currentPage - 1) * itemsPerPage + 1, total)} - ${Math.min(currentPage * itemsPerPage, total)} 표시`;
-            document.getElementById('pageIndicator').innerText = `${currentPage} / ${totalPages}`;
-
-            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
-            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
-        }
-
-        document.getElementById('prevPageBtn').addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                renderTable();
-                updatePaginationInfo();
-            }
-        });
-
-        document.getElementById('nextPageBtn').addEventListener('click', () => {
-            const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderTable();
-                updatePaginationInfo();
-            }
-        });
-
-        // Render Charts with Chart.js (Light Theme Palette)
-        function renderCharts() {
-            if (rawData.length === 0) return;
-
-            Chart.defaults.color = '#64748b';
-            Chart.defaults.borderColor = '#e2e8f0';
-
-            // 1. Bar Chart
-            const topQtyItems = [...rawData].sort((a, b) => b.quantity - a.quantity).slice(0, 8);
-            const barCtx = document.getElementById('barChart').getContext('2d');
-            
-            if (barChartInstance) barChartInstance.destroy();
-            barChartInstance = new Chart(barCtx, {
-                type: 'bar',
-                data: {
-                    labels: topQtyItems.map(i => i.name),
-                    datasets: [{
-                        label: '재고 수량 (EA)',
-                        data: topQtyItems.map(i => i.quantity),
-                        backgroundColor: 'rgba(79, 70, 229, 0.85)',
-                        borderColor: 'rgba(79, 70, 229, 1)',
-                        borderWidth: 1,
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-
-            // 2. Doughnut Chart
-            const categoryMap = {};
-            rawData.forEach(item => {
-                categoryMap[item.category] = (categoryMap[item.category] || 0) + item.totalAmount;
-            });
-
-            const catLabels = Object.keys(categoryMap);
-            const catValues = Object.values(categoryMap);
-
-            const doughnutCtx = document.getElementById('doughnutChart').getContext('2d');
-            if (doughnutChartInstance) doughnutChartInstance.destroy();
-            doughnutChartInstance = new Chart(doughnutCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: catLabels,
-                    datasets: [{
-                        data: catValues,
-                        backgroundColor: [
-                            '#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6'
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11 } }
-                        }
-                    }
-                }
-            });
-
-            // 3. Line Chart
-            const topValueItems = [...rawData].sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 10);
-            const lineCtx = document.getElementById('lineChart').getContext('2d');
-
-            if (lineChartInstance) lineChartInstance.destroy();
-            lineChartInstance = new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                    labels: topValueItems.map(i => i.name),
-                    datasets: [
-                        {
-                            label: '총금액 (원)',
-                            data: topValueItems.map(i => i.totalAmount),
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                            fill: true,
-                            tension: 0.3,
-                            borderWidth: 2.5,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: '단가 (원)',
-                            data: topValueItems.map(i => i.unitPrice),
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                            fill: false,
-                            tension: 0.3,
-                            borderWidth: 2.5,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            grid: { color: '#f1f5f9' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            grid: { drawOnChartArea: false }
-                        },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        // CSV Export
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            if (rawData.length === 0) {
-                alert("내보낼 데이터가 없습니다.");
-                return;
-            }
-
-            let csvContent = "\uFEFF품목코드,품목명,카테고리,재고수량,단가,총금액,안전재고,창고위치,입고일자\n";
-            rawData.forEach(item => {
-                csvContent += `"${item.id}","${item.name}","${item.category}",${item.quantity},${item.unitPrice},${item.totalAmount},${item.safetyStock},"${item.warehouse}","${item.date}"\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', `inventory_export_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast("CSV 파일로 성공적으로 내보냈습니다.");
-        });
-
-        // Initialize with Sample Data on Load
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sampleBtn').click();
-        });
-    </script>
-</body>
-</html>
+</body></html>
